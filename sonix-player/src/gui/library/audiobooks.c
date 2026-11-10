@@ -1210,6 +1210,7 @@ static lv_obj_t *make_pill(lv_obj_t *parent, const char *text, int value, lv_eve
 static lv_obj_t *stop_chapter_switch;
 static lv_obj_t *duration_total_pill;
 static lv_obj_t *duration_chapter_pill;
+static lv_obj_t *chapter_title_switch;
 static settingsrow_duration_t sleep_row;
 static toggle_pills_t rewind_card;
 static lv_obj_t *rewind_pill[REWIND_CHOICES];
@@ -1223,6 +1224,14 @@ static void refresh_settings_page(void) {
 	bool per_chapter = audiobook_duration_per_chapter();
 	settingsrow_pill_active(duration_total_pill, !per_chapter);
 	settingsrow_pill_active(duration_chapter_pill, per_chapter);
+
+	if (chapter_title_switch) {
+		if (audiobook_chapter_as_title()) {
+			lv_obj_add_state(chapter_title_switch, LV_STATE_CHECKED);
+		} else {
+			lv_obj_remove_state(chapter_title_switch, LV_STATE_CHECKED);
+		}
+	}
 
 	if (audiobook_stop_at_chapter_end()) {
 		lv_obj_add_state(stop_chapter_switch, LV_STATE_CHECKED);
@@ -1256,6 +1265,11 @@ static void duration_pick_cb(lv_event_t *e) {
 	}
 	audiobook_set_duration_per_chapter(lv_event_get_user_data(e) != NULL);
 	config_save();
+	refresh_settings_page();
+}
+
+static void chapter_title_cb(lv_event_t *e) {
+    audiobook_set_chapter_as_title(lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED));
 	refresh_settings_page();
 }
 
@@ -1302,6 +1316,10 @@ static void build_settings_page(gui_config_t *cfg) {
 	settingsrow_pills(container, "audiobook_show_duration", &duration_pills);
 	duration_total_pill = settingsrow_pill(duration_pills, "audiobook_duration_total", 0, duration_pick_cb);
 	duration_chapter_pill = settingsrow_pill(duration_pills, "audiobook_duration_chapter", 1, duration_pick_cb);
+
+	// Whether the chapter is displayed in the title area.
+	// Only a book with chapter marks is affected.
+	settingsrow_toggle(container, "audiobook_chapter_title", &chapter_title_switch, chapter_title_cb);
 
 	settingsrow_toggle(container, "audiobook_stop_at_end_of_chapter", &stop_chapter_switch, stop_chapter_cb);
 

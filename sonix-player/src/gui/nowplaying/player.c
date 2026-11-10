@@ -823,6 +823,16 @@ static void update_queue_position(void) {
 	lv_label_set_text_fmt(queue_position_label, "%d/%d", (int)playlist_current_entry() + 1, count);
 }
 
+// The title to show for the track. By default the song's title when the
+// tags have one. Otherwise, the file name.
+const char *display_title(const device_state_t *state) {
+    const char *file = state->current_file;
+	const char *slash = strrchr(file, '/');
+    return state->metadata.title[0] ? state->metadata.title : (slash ? slash + 1 : file);
+}
+
+static char chapter_title[192] = "";
+
 // Works out view_start and view_length for playback at `position` in a file
 // `total` seconds long. Asked on every poll rather than at a chapter change:
 // a seek, a skip or the book simply playing on moves into another chapter, and
@@ -830,13 +840,24 @@ static void update_queue_position(void) {
 static void view_update(double position, double total) {
 	view_start = 0;
 	view_length = total > 0 ? total : 0;
-	if (view_length <= 0 || !audiobook_mode || !audiobook_has_chapters || !audiobook_duration_per_chapter()) {
+	if (view_length <= 0 || !audiobook_mode || !audiobook_has_chapters) {
 		return;
 	}
 	int index = audiobook_chapter_at(position);
 	double start = 0;
-	if (index < 0 || !audiobook_chapter(index, NULL, 0, &start)) {
+	if (index < 0 || !audiobook_chapter(index, chapter_title, sizeof(chapter_title), &start)) {
 		return;
+	}
+	if (audiobook_chapter_as_title() && strcmp(chapter_title, "") != 0) {
+        scrolltext_set(song_title_label, chapter_title);
+	} else {
+	    device_state_t state;
+        device_state_get(&state);
+        const char *title = display_title(&state);
+        scrolltext_set(song_title_label, title);
+	}
+	if (!audiobook_duration_per_chapter()) {
+	    return;
 	}
 	double end = total;
 	if (!audiobook_chapter(index + 1, NULL, 0, &end) || end > total) {
@@ -3576,8 +3597,18 @@ static void refresh_now_playing(void) {
 	}
 
 	const char *file = state.current_file;
-	const char *slash = strrchr(file, '/');
-	scrolltext_set(song_title_label, state.metadata.title[0] ? state.metadata.title : (slash ? slash + 1 : file));
+	const char *title = display_title(&state);
+
+	if (audiobook_mode && audiobook_has_chapters && audiobook_chapter_as_title()) {
+	    int index = audiobook_chapter_at(state.progress_current_secs);
+    	if (index >= 0 && audiobook_chapter(index, chapter_title, sizeof(chapter_title), NULL) && strcmp(chapter_title, "") != 0) {
+            scrolltext_set(song_title_label, chapter_title);
+    	} else {
+            scrolltext_set(song_title_label, title);
+        }
+	} else {
+        scrolltext_set(song_title_label, title);
+    }
 
 	// Whose name goes under the title: see metadata_shown_artist().
 	const char *artist = metadata_shown_artist(&state.metadata);

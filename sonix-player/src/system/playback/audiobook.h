@@ -138,4 +138,8 @@ bool audiobook_current_book(char *book_out, size_t book_size, char *file_out, si
 // chapter's title, else the part's, else "".
 void audiobook_place_label(double seconds, char *out, size_t size);
 
+// Chapter title: show current chapter as title on now-playing screen.
+bool audiobook_chapter_as_title(void);
+void audiobook_set_chapter_as_title(bool on);
+
 #endif /* AUDIOBOOK_H */

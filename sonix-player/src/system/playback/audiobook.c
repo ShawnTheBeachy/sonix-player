@@ -543,3 +543,7 @@ void audiobook_place_label(double seconds, char *out, size_t size) {
 	}
 	pthread_mutex_unlock(&lock);
 }
+
+bool audiobook_chapter_as_title(void) { return config_get_int("audiobook", "chapter_title", 0) == 1; }
+
+void audiobook_set_chapter_as_title(bool on) { config_set_int("audiobook", "chapter_title", on ? 1 : 0); }
